@@ -1,3 +1,4 @@
+#include <base64.h>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -22,26 +23,30 @@ int main(int argc, char** argv) {
     uint64_t shard_size = ceil(file_size / num_shards);
     f.seekg(0);
 
-    // Setup output files
-    system(("mkdir " + file_name).c_str());
+    // Setup output folder
+    system(("mkdir " + file_name + "-shards").c_str());
 
-    char* memblock;
+    // Read file to shard
+    char* memblock = new char[file_size];
+    f.read(memblock, file_size);
+    std::string file_content(memblock);
 
     for (uint32_t i = 0; i < num_shards; i++) {
-        std::string shard_file_name = file_name + "/s" + std::to_string(i);
+        std::string shard_file_name = file_name + "-shards/s" + std::to_string(i);
         system(("touch " + shard_file_name).c_str());
 
         std::ofstream s(shard_file_name, std::ofstream::binary);
 
-        memblock = new char[shard_size];
+        std::string sub_content = file_content.substr(shard_size * i, shard_size);
 
-        f.read(memblock, shard_size);
-        s.write(memblock, shard_size);
+        // Encode and write sharded content
+        std::string enc_memblock = base64_encode((unsigned char*)sub_content.c_str(), shard_size);
+        s.write(enc_memblock.c_str(), enc_memblock.size());
 
-        delete[] memblock;
         s.close();
     }
 
+    delete[] memblock;
     f.close();
 
     return 0;
